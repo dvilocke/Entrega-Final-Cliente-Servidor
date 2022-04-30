@@ -66,13 +66,27 @@ def review_responsibility(new_node_identifier : int , modified_range : str):
     if 'U' in modified_range:
         # es porque tenemos dos rangos, comprobamos el primer rango y despues comprobamos el segundo
         range_1 = get_range(modified_range, '(')
-        print(range_1)
+        judgment = f"True if {new_node_identifier} in range{range_1} else False"
+
+        if eval(judgment):
+            return True
+
         range_2 = get_range(modified_range, '[', left=False)
-        print(range_2)
+        judgment = f"True if {new_node_identifier} in range{range_2} else False"
+
+        if eval(judgment):
+            return True
+
+        return False
+
     else:
         # es porque solo tenemos un rango
         range_1 = get_range(modified_range, '(', only=True)
-        print(range_1)
+        judgment = f"True if {new_node_identifier} in range{range_1} else False"
 
+        if eval(judgment):
+            return True
 
-review_responsibility(25, '(29, 50]')
+        return False
+
+review_responsibility(35, '(29, 64) U [0, 29]')
