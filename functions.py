@@ -69,14 +69,14 @@ def review_responsibility(new_node_identifier : int , modified_range : str):
         judgment = f"True if {new_node_identifier} in range{range_1} else False"
 
         if eval(judgment):
-            print(range_1)
+            #print(range_1)
             return True
 
         range_2 = get_range(modified_range, '[', left=False)
         judgment = f"True if {new_node_identifier} in range{range_2} else False"
 
         if eval(judgment):
-            print(range_2)
+            #print(range_2)
             return True
 
         return False
@@ -87,9 +87,9 @@ def review_responsibility(new_node_identifier : int , modified_range : str):
         judgment = f"True if {new_node_identifier} in range{range_1} else False"
 
         if eval(judgment):
-            print(range_1)
+            #print(range_1)
             return True
 
         return False
 
-print(review_responsibility(77, '(29, 64) U [0, 29]'))
+#print(review_responsibility(77, '(29, 64) U [0, 29]'))

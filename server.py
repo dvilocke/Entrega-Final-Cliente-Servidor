@@ -34,8 +34,13 @@ class Server:
             print_ranges(self.server_id, self.successor, self.server_range, self.modified_range)
             message = self.socket_response.recv_multipart()
             if message[0].decode() == 'i_am_responsible':
-                review_responsibility(int(message[1].decode()), self.modified_range)
-                # necesitamos dar respuesta
+                if review_responsibility(int(message[1].decode()), self.modified_range):
+                    #Es es responsable de guardar ese nodo, debo guardarlo
+                    pass
+                else:
+                    #No es el responsable de guardar ese nodo, debo enviarle mi sucesor
+                    pass
+
 
     def turn_on(self):
         if self.cmd == '--first':
@@ -52,7 +57,7 @@ class Server:
                 self.socket_request.send_multipart(
                     ['i_am_responsible'.encode(), self.server_id.encode()]
                 )
-                message = self.socket_request.recv()
+                message = self.socket_request.recv_multipart()
 
 if __name__ == '__main__':
     server_id = sys.argv[1]
