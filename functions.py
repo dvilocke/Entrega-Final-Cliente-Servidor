@@ -92,4 +92,13 @@ def review_responsibility(new_node_identifier : int , modified_range : str):
 
         return False
 
+def report_response(response : dict):
+    msg = f"""
+    Id del Servidor:{response['server_id']}
+    El Rango Del Servidor es:{response['modified_range']}
+    El Succesor es: {response['successor']}
+    Respuesta Del Servidor : {response['response']}
+    """
+    print(msg)
+
 #print(review_responsibility(77, '(29, 64) U [0, 29]'))
