@@ -39,7 +39,17 @@ class Server:
             if message[0].decode() == 'i_am_responsible':
                 if review_responsibility(int(message[1].decode()), self.modified_range):
                     #Es es responsable de guardar ese nodo, debo guardarlo
-                    pass
+                    self.socket_response.send_multipart(
+                        [pickle.dumps(
+                            {
+                                'server_id': self.server_id,
+                                'modified_range': self.modified_range,
+                                'successor': self.successor,
+                                'response': f'Es Responsable De Almacenar El Id:{int(message[1].decode())}',
+                                'state': True
+                            }
+                        )]
+                    )
                 else:
                     #No es el responsable de guardar ese nodo, debo enviarle mi sucesor
                     self.socket_response.send_multipart(
@@ -53,6 +63,20 @@ class Server:
                             }
                         ) ]
                     )
+            elif message[0].decode() == 'who_pointed_to_me':
+                # Esta parte de aqui trae el nodo predecesor, es decir, quien apunta a mi
+                #pero primero tenemos que tener en cuenta una condición muy importante
+                #es opensar si el nodo que esta en el anillo apunta hacia el mismo, si apunta hacia el mismo
+                #quiere decir que solo existe un nodo en ese anillo
+                if self.successor == get_ports(self.server_id)[1]:
+                    pass
+                else:
+                    pass
+
+    def reset_variables(self):
+        self.successor = ''
+        self.server_range = ''
+        self.modified_range = ''
 
     def turn_on(self):
         if self.cmd == '--first':
@@ -72,15 +96,26 @@ class Server:
                         ['i_am_responsible'.encode(), self.server_id.encode()]
                     )
                     message = pickle.loads(self.socket_request.recv_multipart()[0])
+                    #debo desconectarme de la conexion actual
+
+                    self.socket_request.disconnect(url=connection)
                     if not message['state']:
                         report_response(message)
+                        predecessor = message[]
                         connection = message['successor']
                         time.sleep(4)
                         continue
                     else:
                         #Es porque ya encontro un Nodo al cual conectarse
+                        report_response(message)
                         break
-                print('funciona')
+                #procedimiento para traerme el predecesor del nodo que me dijo que si
+                self.socket_request.connect(connection)
+                self.socket_request.send_multipart(
+                    ['who_pointed_to_me'.encode(), ''.encode()]
+                )
+                predecessor_address = self.socket_request.recv_multipart()
+
 
 if __name__ == '__main__':
     server_id = sys.argv[1]

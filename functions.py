@@ -92,6 +92,24 @@ def review_responsibility(new_node_identifier : int , modified_range : str):
 
         return False
 
+def adjust_ranges(range_1 : str):
+    numbers = ''
+    for c in range_1:
+        if c != ',':
+            if c.isdigit():
+                numbers += c
+        else:
+            numbers += ' '
+
+    x = numbers.split(sep=' ')
+
+    if int(x[0]) < int(x[1]):
+        server_range = range_1
+        modified_range = f"({int(x[0])}, {int(x[1])}) U [0, {int(x[0])}]"
+        return server_range, modified_range
+    else:
+        return range_1, range_1
+
 def report_response(response : dict):
     msg = f"""
     Id del Servidor:{response['server_id']}
@@ -101,4 +119,5 @@ def report_response(response : dict):
     """
     print(msg)
 
-#print(review_responsibility(77, '(29, 64) U [0, 29]'))
+#print(review_responsibility(77, '(29, 64]'))
+print(adjust_ranges('(29, 15]'))
