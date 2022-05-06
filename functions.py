@@ -3,9 +3,10 @@ def assign_range(server_id : str, limit_algorithm: int):
     modified_range = f"({server_id}, {limit_algorithm}) U [0, {server_id}]"
     return server_range, modified_range
 
-def print_ranges(server_id : str, successor : str, server_range : str, modified_range : str):
+def print_ranges(server_id : str, successor : str, server_range : str, modified_range : str, listen : str):
     msg = f"""
     Identificador del servidor : {server_id}
+    Donde escucha el servidor: {listen}
     sucesor : {successor}
     Rango establecido : {server_range}
     Rango modificado : {modified_range}
@@ -92,7 +93,7 @@ def review_responsibility(new_node_identifier : int , modified_range : str):
 
         return False
 
-def adjust_ranges(range_1 : str):
+def adjust_ranges(range_1 : str, LIMIT_ALGORITHM : int):
     numbers = ''
     for c in range_1:
         if c != ',':
@@ -103,21 +104,32 @@ def adjust_ranges(range_1 : str):
 
     x = numbers.split(sep=' ')
 
-    if int(x[0]) < int(x[1]):
+    if int(x[0]) > int(x[1]):
         server_range = range_1
-        modified_range = f"({int(x[0])}, {int(x[1])}) U [0, {int(x[0])}]"
+        modified_range = f"({int(x[0])}, {LIMIT_ALGORITHM}) U [0, {int(x[1])}]"
         return server_range, modified_range
     else:
         return range_1, range_1
 
 def report_response(response : dict):
     msg = f"""
+    --- Respuesta de un Nodo del anillo---
     Id del Servidor:{response['server_id']}
     El Rango Del Servidor es:{response['modified_range']}
-    El Succesor es: {response['successor']}
+    conexion Al Succesor es: {response['successor']}
     Respuesta Del Servidor : {response['response']}
     """
     print(msg)
 
-#print(review_responsibility(77, '(29, 64]'))
-print(adjust_ranges('(29, 15]'))
+def report_conection(id_new_node : str, server_id : str, predeccessor : str):
+    msg = f"""
+    ----- Información de conexión----
+    El nuevo nodo que se va ingresar al anillo es:{id_new_node}
+    Ese nuevo nodo, va a puntar al nodo:{server_id}
+    El predecesor del nodo:{server_id}, era el nodo:{predeccessor}
+    """
+    print(msg)
+
+
+#print(review_responsibility(29, '(50, 64) U [0, 29]'))
+#print(adjust_ranges('(50, 29]', 64))

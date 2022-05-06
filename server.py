@@ -1,10 +1,9 @@
-
+import os
 from functions import *
 import pickle
 import time
 import sys
 import zmq
-
 
 class Server:
 
@@ -33,8 +32,9 @@ class Server:
 
     def start(self):
         self.socket_response.bind(get_ports(self.url)[0])
-        print_ranges(self.server_id, self.successor, self.server_range, self.modified_range)
         while True:
+            os.system('cls')
+            print_ranges(self.server_id, self.successor, self.server_range, self.modified_range, get_ports(self.url)[0])
             message = self.socket_response.recv_multipart()
             if message[0].decode() == 'i_am_responsible':
                 if review_responsibility(int(message[1].decode()), self.modified_range):
@@ -46,6 +46,7 @@ class Server:
                                 'modified_range': self.modified_range,
                                 'successor': self.successor,
                                 'response': f'Es Responsable De Almacenar El Id:{int(message[1].decode())}',
+                                'my_connection' : get_ports(self.url)[1],
                                 'state': True
                             }
                         )]
@@ -63,18 +64,22 @@ class Server:
                             }
                         ) ]
                     )
-            elif message[0].decode() == 'who_pointed_to_me':
-                # Esta parte de aqui trae el nodo predecesor, es decir, quien apunta a mi
-                #pero primero tenemos que tener en cuenta una condición muy importante
-                #es opensar si el nodo que esta en el anillo apunta hacia el mismo, si apunta hacia el mismo
-                #quiere decir que solo existe un nodo en ese anillo
-                if self.successor == get_ports(self.server_id)[1]:
-                    pass
-                else:
-                    pass
+            elif message[0].decode() == 'query_id':
+                self.successor = message[1].decode()
+                self.socket_response.send_multipart(
+                    [self.server_id.encode()]
+                )
+            elif message[0].decode() == 'change_my_ranges':
+                information_new_node = pickle.loads(message[1])
+                self.reset_variables()
+                self.server_range, self.modified_range = adjust_ranges(f"({information_new_node['id_node']}, {self.server_id}]", self.LIMIT_ALGORITHM)
+
+                self.socket_response.send_multipart(
+                    ['ok'.encode()]
+                )
+
 
     def reset_variables(self):
-        self.successor = ''
         self.server_range = ''
         self.modified_range = ''
 
@@ -89,6 +94,7 @@ class Server:
             if self.home_url is not None:
                 #Me conecto al servidor que yo dije que quiero entrar a traves de la variable self.home_url
                 connection  = get_ports(self.home_url)[1]
+                predecessor = connection
                 while True:
                     self.socket_request.connect(connection)
                     #Despues debo pregunta si es responsable de guardarme
@@ -97,11 +103,10 @@ class Server:
                     )
                     message = pickle.loads(self.socket_request.recv_multipart()[0])
                     #debo desconectarme de la conexion actual
-
-                    self.socket_request.disconnect(url=connection)
+                    self.socket_request.disconnect(connection)
                     if not message['state']:
                         report_response(message)
-                        predecessor = message[]
+                        predecessor = connection
                         connection = message['successor']
                         time.sleep(4)
                         continue
@@ -109,16 +114,42 @@ class Server:
                         #Es porque ya encontro un Nodo al cual conectarse
                         report_response(message)
                         break
-                #procedimiento para traerme el predecesor del nodo que me dijo que si
-                self.socket_request.connect(connection)
+                #Proceso de traer el predecesor y que apunte al nuevo nodo
+                self.socket_request.connect(predecessor)
                 self.socket_request.send_multipart(
-                    ['who_pointed_to_me'.encode(), ''.encode()]
+                    ['query_id'.encode(), get_ports(self.url)[1].encode()]
                 )
-                predecessor_address = self.socket_request.recv_multipart()
+                id_predecessor = self.socket_request.recv_multipart()[0].decode()
+                self.socket_request.disconnect(predecessor)
 
+                time.sleep(4)
+                report_conection(self.server_id, message['server_id'], id_predecessor)
+                time.sleep(4)
+                #Proceso de los rangos
+                self.server_range, self.modified_range = adjust_ranges(f"({id_predecessor}, {self.server_id}]", self.LIMIT_ALGORITHM)
+                self.successor = message['my_connection']
+
+
+                #Despues de procesar los cambios, debo cambiar los rango del nodo que me respondio que si
+                self.socket_request.connect(message['my_connection'])
+                self.socket_request.send_multipart(
+                    ['change_my_ranges'.encode(), pickle.dumps(
+                        {
+                            'id_node' : self.server_id
+                        }
+                    )]
+                )
+                response = self.socket_request.recv_multipart()[0].decode()
+                self.socket_request.disconnect(message['my_connection'])
+
+                print('------ Lanzando el nuevo servidor :D -------')
+                time.sleep(10)
+
+                if response == 'ok':
+                    self.start()
 
 if __name__ == '__main__':
     server_id = sys.argv[1]
     url = sys.argv[2]
     cmd = sys.argv[3]
-    Server(server_id, url, cmd, '5555').turn_on()
+    Server(server_id, url, cmd, '8888').turn_on()
