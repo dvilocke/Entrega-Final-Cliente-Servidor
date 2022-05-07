@@ -3,17 +3,18 @@ from functions import *
 import pickle
 import time
 import sys
+import shutil
 import zmq
 
 class Server:
 
     CONTEXT = zmq.Context()
-    LIMIT_ALGORITHM = 64
+    LIMIT_ALGORITHM = 2**160
+    #LIMIT_ALGORITHM = 64
 
     def __init__(self, server_id : str, url : str , cmd : str, home_url: str = None):
 
         #Atributos de clase
-
         self.server_id = server_id
         self.url = url
         self.cmd = cmd
@@ -32,6 +33,7 @@ class Server:
 
     def start(self):
         self.socket_response.bind(get_ports(self.url)[0])
+        os.mkdir(f"server_{self.url}")
         while True:
             os.system('cls')
             print_ranges(self.server_id, self.successor, self.server_range, self.modified_range, get_ports(self.url)[0])
@@ -74,10 +76,36 @@ class Server:
                 self.reset_variables()
                 self.server_range, self.modified_range = adjust_ranges(f"({information_new_node['id_node']}, {self.server_id}]", self.LIMIT_ALGORITHM)
 
+                #como estoy cambiando los rangos debo mover los archivos que no cumplan con ese rango :C
+
                 self.socket_response.send_multipart(
                     ['ok'.encode()]
                 )
 
+            elif message[0].decode() == 'you_point_at_me':
+                self.socket_response.send_multipart(
+                    [pickle.dumps(
+                        {
+                            'successor': self.successor,
+                            'predecessor' : get_ports(self.url)[1],
+                            'state' : True if message[1].decode() == self.successor else False
+                        }
+                    )]
+                )
+
+            elif message[0].decode() == 'save':
+                file = pickle.loads(message[1])
+                #debo comprobar si ya existe un archivo con ese hash, si existe un archivo hash con ese
+                #mismo hash, no tiene sentido guardarlo
+                archive = f"server_{self.url}/{file['sha1']}{file['extension']}"
+                if not  os.path.exists(archive):
+                    with open(f"{file['sha1']}{file['extension']}", 'ab') as f:
+                        f.write(file['content'])
+                    shutil.move(f"{file['sha1']}{file['extension']}", f"server_{self.url}")
+
+                self.socket_response.send_multipart(
+                    [f"server_{self.url}".encode()]
+                )
 
     def reset_variables(self):
         self.server_range = ''
@@ -94,7 +122,7 @@ class Server:
             if self.home_url is not None:
                 #Me conecto al servidor que yo dije que quiero entrar a traves de la variable self.home_url
                 connection  = get_ports(self.home_url)[1]
-                predecessor = connection
+                #predecessor = connection
                 while True:
                     self.socket_request.connect(connection)
                     #Despues debo pregunta si es responsable de guardarme
@@ -104,16 +132,37 @@ class Server:
                     message = pickle.loads(self.socket_request.recv_multipart()[0])
                     #debo desconectarme de la conexion actual
                     self.socket_request.disconnect(connection)
+                    report_response(message)
+                    time.sleep(6)
                     if not message['state']:
-                        report_response(message)
-                        predecessor = connection
+                        #predecessor = connection
                         connection = message['successor']
-                        time.sleep(4)
                         continue
                     else:
-                        #Es porque ya encontro un Nodo al cual conectarse
-                        report_response(message)
-                        break
+                        #Es porque ya encontro un Nodo al cual conectarse, entonces busco su predecesor
+                        #Quiere decir que me estoy apuntando yo mismo
+                        predecessor = None
+                        if message['successor'] == message['my_connection']:
+                            predecessor = message['successor']
+                            break
+                        #no me estoy apuntando yo mismo
+                        else:
+                            x = message['successor']
+                            while True:
+                                self.socket_request.connect(x)
+                                self.socket_request.send_multipart(
+                                    ['you_point_at_me'.encode(), message['my_connection'].encode()]
+                                )
+                                y = pickle.loads(self.socket_request.recv_multipart()[0])
+                                self.socket_request.disconnect(x)
+                                if not y['state']:
+                                    x = y['successor']
+                                    continue
+
+                                predecessor = y['predecessor']
+                                break
+                            #report_response(message)
+                            break
                 #Proceso de traer el predecesor y que apunte al nuevo nodo
                 self.socket_request.connect(predecessor)
                 self.socket_request.send_multipart(
@@ -142,14 +191,14 @@ class Server:
                 response = self.socket_request.recv_multipart()[0].decode()
                 self.socket_request.disconnect(message['my_connection'])
 
-                print('------ Lanzando el nuevo servidor :D -------')
+                print('\t------ Lanzando el nuevo servidor :D -------')
                 time.sleep(10)
 
                 if response == 'ok':
                     self.start()
 
 if __name__ == '__main__':
-    server_id = sys.argv[1]
-    url = sys.argv[2]
-    cmd = sys.argv[3]
-    Server(server_id, url, cmd, '8888').turn_on()
+    server_id = str(generate_server_id(500))
+    url = sys.argv[1]
+    cmd = sys.argv[2]
+    Server(server_id, url, cmd, '7777').turn_on()

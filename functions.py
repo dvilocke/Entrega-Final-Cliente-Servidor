@@ -1,3 +1,7 @@
+import hashlib
+import string
+import random
+
 def assign_range(server_id : str, limit_algorithm: int):
     server_range = f"({server_id}, {limit_algorithm}]"
     modified_range = f"({server_id}, {limit_algorithm}) U [0, {server_id}]"
@@ -131,5 +135,13 @@ def report_conection(id_new_node : str, server_id : str, predeccessor : str):
     print(msg)
 
 
-#print(review_responsibility(29, '(50, 64) U [0, 29]'))
+def generate_server_id(n):
+    sha1 = hashlib.sha1()
+    cadena =  ''.join([random.choice(string.ascii_letters + string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(n)])
+    sha1.update(cadena.encode())
+
+    return int(sha1.hexdigest(), 16)
+
+
+print(review_responsibility(815214802406361232556826505624409233887463191431, '(662403047594505137831771753655161236886256407857, 1178064936386267465930441796275973080866459643147]'))
 #print(adjust_ranges('(50, 29]', 64))
