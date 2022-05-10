@@ -201,4 +201,4 @@ if __name__ == '__main__':
     server_id = str(generate_server_id(500))
     url = sys.argv[1]
     cmd = sys.argv[2]
-    Server(server_id, url, cmd, '7777').turn_on()
+    Server(server_id, url, cmd, '6666').turn_on()

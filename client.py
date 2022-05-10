@@ -79,7 +79,6 @@ class Client:
     def send_to_servers(self):
         if os.path.exists(self.file_name):
             conection = self.get_ports()[1]
-            sha1 = hashlib.sha1()
             counter = 1
             keep_reading = False
             file_extension = self.get_the_extension()
@@ -92,6 +91,7 @@ class Client:
                         data = f.read(self.SIZE)
 
                     keep_reading = False
+                    sha1 = hashlib.sha1()
                     sha1.update(data)
                     self.socket_request.send_multipart(
                         ['i_am_responsible'.encode(), str(int(sha1.hexdigest(), 16)).encode()]
