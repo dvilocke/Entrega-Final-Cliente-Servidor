@@ -107,6 +107,31 @@ class Server:
                     [f"server_{self.url}".encode()]
                 )
 
+            elif message[0].decode() == 'you_have_this_sha1':
+                sha1_to_search = message[1].decode()
+                archive = f"server_{self.url}/{sha1_to_search}"
+                if os.path.exists(archive):
+                    with open(archive, 'rb') as f:
+                        content = f.read()
+                    self.socket_response.send_multipart(
+                        [pickle.dumps(
+                            {
+                                'status' : True,
+                                'content' : content
+                            }
+                        )]
+                    )
+                else:
+                    self.socket_response.send_multipart(
+                        [pickle.dumps(
+                            {
+                                'status' : False,
+                                'successor' : self.successor
+                            }
+                        )]
+                    )
+
+
     def reset_variables(self):
         self.server_range = ''
         self.modified_range = ''
@@ -201,4 +226,4 @@ if __name__ == '__main__':
     server_id = str(generate_server_id(500))
     url = sys.argv[1]
     cmd = sys.argv[2]
-    Server(server_id, url, cmd, '6666').turn_on()
+    Server(server_id, url, cmd).turn_on()
