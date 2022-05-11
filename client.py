@@ -177,13 +177,13 @@ class Client:
                 response = pickle.loads(self.socket_request.recv_multipart()[0])
 
                 if not response['state']:
-                    print(f"\nEl server:{response['server_id']} no es responsable de almacenar el Utorrent")
+                    print(f"\n\tEl server:{response['server_id']} no es responsable de almacenar el Utorrent")
                     time.sleep(5)
                     self.socket_request.disconnect(conection)
                     conection = response['successor']
                     continue
 
-                print(f"\nEl server:{response['server_id']} es responsable de almacenar el Utorrent")
+                print(f"\n\tEl server:{response['server_id']} es responsable de almacenar el Utorrent")
                 time.sleep(5)
                 self.socket_request.disconnect(conection)
                 break
@@ -200,11 +200,27 @@ class Client:
                 )]
             )
             bd_server = self.socket_request.recv_multipart()[0].decode()
-            print(f'\nEl Utorrent se guardo en el server:{bd_server}')
+            print(f'\n\tEl Utorrent se guardo en el server:{bd_server}')
             time.sleep(5)
 
             return sha1.hexdigest() + '.miguel'
 
+    def verify_sha1(self, sha1_original : str, name_2 : str):
+        content = None
+        sha1 = hashlib.sha1()
+        with open(name_2, 'rb') as f:
+            content = f.read()
+
+        sha1.update(content)
+
+        msg = f"""
+        --------- Informacion de SHA1 ------------
+        sha1 del archivo original : {sha1_original}
+        sha1 del archivo descargado: {sha1.hexdigest()}
+        son iguales : {'SI' if sha1_original == sha1.hexdigest() else 'NO'}
+        """
+
+        return msg
 
     def download_file(self, code):
         #Primero debo recuperar el utorrent
@@ -232,32 +248,42 @@ class Client:
 
         items = utorrent['content']
 
-        while counter <= len(items):
-            self.socket_request.connect(conection)
-            #sha1_to_search = (items[counter - 1 ]['sha1'] + self.TORRENTS[torrent_index]['extension'])
+        #debemos crear el archivo
+        #aqui se hace un reinicio de la conexion, tambien se puede empezar en la conexion
+        #en la que estaba antes
+        conection = self.get_ports()[1]
+        with open('descarga_' + utorrent['file_name'], 'ab') as f:
+            while counter <= len(items):
+                self.socket_request.connect(conection)
+                sha1_to_search : str = items[counter - 1 ]['sha1'] + utorrent['extension']
+                self.socket_request.send_multipart(
+                    ['you_have_this_sha1'.encode(), sha1_to_search.encode()]
+                )
+                response = pickle.loads(self.socket_request.recv_multipart()[0])
+                self.socket_request.disconnect(conection)
 
-            self.socket_request.send_multipart(
-                #['you_have_this_sha1'.encode(), sha1_to_search.encode()]
-            )
+                if not response['status']:
+                    conection = response['successor']
+                    continue
 
-            response = pickle.loads(self.socket_request.recv_multipart()[0])
-            self.socket_request.disconnect(conection)
-
-            if response['status']:
-
+                print(f'\n\t Se descargo la parte :{counter}')
+                time.sleep(5)
+                f.write(response['content'])
                 counter += 1
-                self.socket_request.disconnect(conection)
-            else:
-                self.socket_request.disconnect(conection)
-                conection = response['successor']
 
-
+        #comprobar si se guardo bien :D
+        print('\n\t----- Iniciando proceso para comprobar los sha1 ----')
+        time.sleep(4)
+        print(self.verify_sha1(utorrent['sha1_original_file'], 'descarga_' + utorrent['file_name']))
+        time.sleep(20)
 
 if __name__ == '__main__':
     x = Client('prueba.txt', '6666')
     code = x.send_to_servers()
-    print(f'\ncodigo para compartir:{code}')
+    print(f'\n\tcodigo para compartir:{code}')
     time.sleep(5)
-    print('\n-------- Iniciando proceso de descarga ---------')
+    print('\n\t-------- Iniciando proceso de descarga ---------')
     time.sleep(5)
     x.download_file(code)
+
+    print('\n\t--------------- Hasta Luego :D -------------------------')
